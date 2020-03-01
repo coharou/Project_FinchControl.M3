@@ -565,7 +565,7 @@ namespace Project_FinchControl
         {
             WriteLine();
             WriteLine("\tIn a moment, you will be entering a whole number between 0 and 255.");
-            WriteLine("\tThis will be the speed of the " + motorType + " when the talent show begins.");
+            WriteLine("\tThis will be the speed of the " + motorType + " motor when the talent show begins.");
             WriteLine("\tPlease think of the value now, before heading forward.");
         }
 
