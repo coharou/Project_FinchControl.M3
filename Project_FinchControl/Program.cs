@@ -9,18 +9,15 @@ namespace Project_FinchControl
 {
 
     //-----------------------------------------------------------------------------------------------------------
-    //      Application:    Finch Control (Mission 3, S1)
+    //      Application:    Finch Control (Mission 3 Sprint 2)
     //      App. Type:      Console
     //      Author:         Haroutunian, Colin B
     //
-    //      Description:    An application that is a test of the first
-    //                      part of the Finch Control. It is based on
-    //                      the starter solution. Aside from the
-    //                      talent show features, it includes a bit of
-    //                      an overhaul for the connection screens.
+    //      Description:    An application for the Finch Control. 
+    //                      It is based on the starter solution.
     //                      
     //      Date Created:   February 23rd, 2020
-    //      Date Revised:   February 28th, 2020
+    //      Date Revised:   March 1st, 2020
     //-----------------------------------------------------------------------------------------------------------
 
 
@@ -109,7 +106,7 @@ namespace Project_FinchControl
                         break;
 
                     case "3":
-
+                        DisplayDataRecorderMenuScreen(finchRobot);
                         break;
 
                     case "4":
@@ -371,6 +368,249 @@ namespace Project_FinchControl
 
         #endregion
 
+        #region DATA RECORDER
+        static void DisplayDataRecorderMenuScreen(Finch myFinch)
+        {
+            CursorVisible = true;
+            string goToCase;
+            bool backToMain;
+            backToMain = false;
+            do
+            {
+                DisplayDataRecorderMenuPrompt();
+                WriteLine("\t1) Temperature recording");
+                WriteLine("\t2) Light value recording");
+                WriteLine("\t3) Return to Main Menu");
+                WriteLine();
+                Write("\tEnter your choice here: ");
+                CursorVisible = true;
+                goToCase = ReadLine();
+                switch (goToCase)
+                {
+                    case "1":
+                        EnterRecording(myFinch, "Temperature");
+                        break;
+                    case "2":
+                        EnterRecording(myFinch, "Light");
+                        break;
+                    case "3":
+                        backToMain = true;
+                        break;
+                    default:
+                        WriteLine("\tPlease only enter:");
+                        WriteLine("\t1 for temperature recording,");
+                        WriteLine("\t2 for light value recording,");
+                        WriteLine("\t3 to return to the main menu.");
+                        DisplayContinuePrompt();
+                        break;
+                }
+            } while (backToMain == false);
+        }
+
+        static void EnterRecording(Finch finchRobot, string typeRecorded)
+        {
+            DisplayDataTypeSelectionPrompt(typeRecorded);
+            WriteLine();
+
+            bool confirmationResponse = DataTypeConfirmation();
+            if (confirmationResponse == true)
+            {
+                Clear();
+                int theirSampleSize;
+                theirSampleSize = DataTypeSampleSize(typeRecorded);
+                BuildTheArrays(finchRobot, theirSampleSize, typeRecorded);
+                DisplayContinuePrompt();
+            }
+            else
+            {
+            }
+        }
+
+        static bool DataTypeConfirmation()
+        {
+            WriteLine("\tAre you sure you want to do this?");
+            WriteLine("\tPress ENTER if so. Press ESC to return to the data recorder menu.");
+            ConsoleKeyInfo keyCode;
+            do
+            {
+                keyCode = ReadKey(intercept: true);
+                if (keyCode.Key == ConsoleKey.Enter)
+                {
+                    return true;
+                }
+                if (keyCode.Key == ConsoleKey.Escape)
+                {
+                    return false;
+                }
+                else
+                {
+                    WriteLine("\tYou entered " + keyCode.Key + ".");
+                    WriteLine("\tPlease only press ENTER or ESC next time.");
+                    DisplayContinuePrompt();
+                    return false;
+                }
+
+            } while (keyCode.Key != ConsoleKey.Escape && keyCode.Key != ConsoleKey.Enter);
+        }
+
+        static int DataTypeSampleSize(string dataDecision)
+        {
+            bool newConfirmation;
+            int desiredSample;
+
+            do
+            {
+                WriteLine();
+                WriteLine("\tYou will now be entering a sample size for the " + dataDecision + " recording.");
+                WriteLine("\tA sample will be taken every 2 seconds, so please keep that in mind when making your choice.");
+                WriteLine();
+                Write("\tEnter the desired sample size: ");
+
+                desiredSample = DataTypeSampleSizeDesired();
+
+                Clear();
+                WriteLine();
+                WriteLine("\tYour chosen sample is " + desiredSample + ".");
+                WriteLine("\tThis will take approximately " + desiredSample * 2 + " seconds.");
+                WriteLine();
+                
+                newConfirmation = DataTypeConfirmation();
+                if (newConfirmation == false)
+                {
+                    WriteLine();
+                    WriteLine("\tPlease re-enter your desired values, then.");
+                    DisplayContinuePrompt();
+                    Clear();
+                }
+                else
+                {
+
+                }
+            } while (newConfirmation == false);
+
+            return desiredSample;
+        }
+
+        static int DataTypeSampleSizeDesired()
+        {
+            int desiredSample;
+            bool sampleQuality;
+            do
+            {
+                sampleQuality = int.TryParse(ReadLine(), out desiredSample);
+                if (sampleQuality == false)
+                {
+                    WriteLine();
+                    WriteLine("\tPlease only respond with number values, like '10' '25' or '50'.");
+                    desiredSample = 0;
+                    Write("\tEnter the desired sample size: ");
+                    sampleQuality = int.TryParse(ReadLine(), out desiredSample);
+                }
+                else
+                {
+                }
+            } while (sampleQuality == false);
+            return desiredSample;
+        }
+
+        static void BuildTheArrays(Finch finchRobot, int theirSampleSize, string typeRecorded)
+        {
+            int[] firstArray;
+            firstArray = new int[theirSampleSize];
+            int[] secondArray;
+            secondArray = new int[theirSampleSize];
+            int[] numberingArray;
+            numberingArray = new int[theirSampleSize];
+
+            string typeOne;
+            typeOne = "";
+            string typeTwo;
+            typeTwo = "";
+
+            int firstTotal;
+            firstTotal = 0;
+            int secondTotal;
+            secondTotal = 0;
+
+            if (typeRecorded == "Temperature")
+            {
+                finchRobot.setLED(255, 0, 0);
+                finchRobot.noteOn(500);
+                typeOne = "CELCIUS";
+                typeTwo = "FAHRENHEIT";
+
+                WriteLine("\tHere are your values for the " + typeRecorded + ".");
+                WriteLine();
+                WriteLine("\t" + "ORDER" + "          " + typeOne + "            " + typeTwo);
+
+                //INDIVIDUAL DATA
+                for (int sample = 0; sample < theirSampleSize; sample++)
+                {
+                    firstArray[sample] += Convert.ToInt32(finchRobot.getTemperature());
+                    secondArray[sample] += CelciusToFahrenheit(finchRobot);
+                    numberingArray[sample] += sample;
+                    WriteLine("\t" + numberingArray[sample] + "               " + firstArray[sample] + "               " + secondArray[sample]);
+                    finchRobot.wait(2000);
+                }
+                
+                //AVERAGED DATA
+                for (int sample = 0; sample < theirSampleSize; sample ++)
+                {
+                    firstTotal = firstTotal + firstArray[sample];
+                    secondTotal = secondTotal + secondArray[sample];
+                }
+
+                int firstAverage = firstTotal / theirSampleSize;
+                int secondAverage = secondTotal / theirSampleSize;
+                WriteLine("\t" + " " + "               " + firstAverage + "               " + secondAverage);
+            }
+
+            if (typeRecorded == "Light")
+            {
+                finchRobot.setLED(0, 125, 125);
+                finchRobot.noteOn(500);
+                typeOne = "LEFT";
+                typeTwo = "RIGHT";
+
+                WriteLine("\tHere are your values for the " + typeRecorded + ".");
+                WriteLine();
+                WriteLine("\t" + "ORDER" + "          " + typeOne + "            " + typeTwo);
+
+                //INDIVIDUAL DATA
+                for (int sample = 0; sample < theirSampleSize; sample++)
+                {
+                    firstArray[sample] += finchRobot.getLeftLightSensor();
+                    secondArray[sample] += finchRobot.getRightLightSensor();
+                    numberingArray[sample] += sample;
+                    WriteLine("\t"+ numberingArray[sample] + "               " + firstArray[sample] + "               " + secondArray[sample]);
+                    finchRobot.wait(2000);
+                }
+
+                //AVERAGED DATA
+                for (int sample = 0; sample < theirSampleSize; sample++)
+                {
+                    firstTotal = firstTotal + firstArray[sample];
+                    secondTotal = secondTotal + secondArray[sample];
+                }
+
+                int firstAverage = firstTotal / theirSampleSize;
+                int secondAverage = secondTotal / theirSampleSize;
+                WriteLine("\t" + " " + "               " + firstAverage + "               " + secondAverage);
+            }
+
+            finchRobot.setLED(0, 0, 0);
+            finchRobot.noteOff();
+        }
+
+        static int CelciusToFahrenheit(Finch finchRobot)
+        {
+            int fahrenheitVal;
+            fahrenheitVal = (Convert.ToInt32(finchRobot.getTemperature()) * 9) / 5 + 32;
+            return fahrenheitVal;
+        }
+
+        #endregion
+
         #region FINCH ROBOT MANAGEMENT
         /// <summary>
         /// *****************************************************************
@@ -543,16 +783,9 @@ namespace Project_FinchControl
 
         /// <summary>
         /// *****************************************************************
-        /// *                         Prompts                               *
+        /// *                     Talent Show Screens                       *
         /// *****************************************************************
         /// </summary>
-        static void DisplayContinuePrompt()
-        {
-            WriteLine();
-            WriteLine("\tPress any key to continue.");
-            ReadKey(intercept: true);
-        }
-
         static void DisplayEnterEverythingSoundPrompt()
         {
             WriteLine();
@@ -567,6 +800,37 @@ namespace Project_FinchControl
             WriteLine("\tIn a moment, you will be entering a whole number between 0 and 255.");
             WriteLine("\tThis will be the speed of the " + motorType + " motor when the talent show begins.");
             WriteLine("\tPlease think of the value now, before heading forward.");
+        }
+
+        /// <summary>
+        /// *****************************************************************
+        /// *                   Data Recorder Screens                       *
+        /// *****************************************************************
+        /// </summary>
+        static void DisplayDataRecorderMenuPrompt()
+        {
+            WriteLine();
+            DisplayScreenHeader("Data Recorder");
+            WriteLine("\tAt this screen, you can access ways to obtain temperature and light values from around the Finch Robot.");
+        }
+
+        static void DisplayDataTypeSelectionPrompt(string dataType)
+        {
+            DisplayScreenHeader(dataType);
+            WriteLine("\tWelcome to the " + dataType + " screen.");
+            WriteLine("\tHere, you will be able to access data for the " + dataType + " around your Finch Robot.");
+        }
+
+        /// <summary>
+        /// *****************************************************************
+        /// *                         Prompts                               *
+        /// *****************************************************************
+        /// </summary>
+        static void DisplayContinuePrompt()
+        {
+            WriteLine();
+            WriteLine("\tPress any key to continue.");
+            ReadKey(intercept: true);
         }
 
         static void DisplayTryAgainPrompt()
