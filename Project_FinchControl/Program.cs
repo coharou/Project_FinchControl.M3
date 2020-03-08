@@ -9,7 +9,7 @@ namespace Project_FinchControl
 {
 
     //-----------------------------------------------------------------------------------------------------------
-    //      Application:    Finch Control (Mission 3 Sprint 2)
+    //      Application:    Finch Control (Mission 3 Sprint 3)
     //      App. Type:      Console
     //      Author:         Haroutunian, Colin B
     //
@@ -17,7 +17,7 @@ namespace Project_FinchControl
     //                      It is based on the starter solution.
     //                      
     //      Date Created:   February 23rd, 2020
-    //      Date Revised:   March 1st, 2020
+    //      Date Revised:   March 8th, 2020
     //-----------------------------------------------------------------------------------------------------------
 
 
@@ -110,7 +110,7 @@ namespace Project_FinchControl
                         break;
 
                     case "4":
-
+                        DisplayAlarmMenuScreen(finchRobot);
                         break;
 
                     case "5":
@@ -411,8 +411,9 @@ namespace Project_FinchControl
         {
             DisplayDataTypeSelectionPrompt(typeRecorded);
             WriteLine();
+            WriteLine("\tAre you sure you want to do this?");
 
-            bool confirmationResponse = DataTypeConfirmation();
+            bool confirmationResponse = GeneralConfirmation();
             if (confirmationResponse == true)
             {
                 Clear();
@@ -424,33 +425,6 @@ namespace Project_FinchControl
             else
             {
             }
-        }
-
-        static bool DataTypeConfirmation()
-        {
-            WriteLine("\tAre you sure you want to do this?");
-            WriteLine("\tPress ENTER if so. Press ESC to return to the data recorder menu.");
-            ConsoleKeyInfo keyCode;
-            do
-            {
-                keyCode = ReadKey(intercept: true);
-                if (keyCode.Key == ConsoleKey.Enter)
-                {
-                    return true;
-                }
-                if (keyCode.Key == ConsoleKey.Escape)
-                {
-                    return false;
-                }
-                else
-                {
-                    WriteLine("\tYou entered " + keyCode.Key + ".");
-                    WriteLine("\tPlease only press ENTER or ESC next time.");
-                    DisplayContinuePrompt();
-                    return false;
-                }
-
-            } while (keyCode.Key != ConsoleKey.Escape && keyCode.Key != ConsoleKey.Enter);
         }
 
         static int DataTypeSampleSize(string dataDecision)
@@ -473,8 +447,9 @@ namespace Project_FinchControl
                 WriteLine("\tYour chosen sample is " + desiredSample + ".");
                 WriteLine("\tThis will take approximately " + desiredSample * 2 + " seconds.");
                 WriteLine();
-                
-                newConfirmation = DataTypeConfirmation();
+                WriteLine("\tAre you sure you want to do this?");
+
+                newConfirmation = GeneralConfirmation();
                 if (newConfirmation == false)
                 {
                     WriteLine();
@@ -607,6 +582,222 @@ namespace Project_FinchControl
             int fahrenheitVal;
             fahrenheitVal = (Convert.ToInt32(finchRobot.getTemperature()) * 9) / 5 + 32;
             return fahrenheitVal;
+        }
+
+        #endregion
+
+        #region ALARM SYSTEM
+        static void DisplayAlarmMenuScreen(Finch myFinch)
+        {
+            bool keepMenu;
+            keepMenu = true;
+            bool userContinue;
+            userContinue = true;
+            do
+            {
+                DisplayAlarmMenuPrompt();
+                WriteLine("\tAre you sure you want to do this?");
+                userContinue = GeneralConfirmation();
+                if (userContinue == true)
+                {
+                    int[] tempRange = BuildValueThreshold("temperature");
+                    int[] lightRange = BuildValueThreshold("light");
+                    int monitorTime = ObtainTime();
+                    DisplayMonitorPrompt();
+                    StartMonitor(myFinch, tempRange, lightRange, monitorTime);
+                    DisplayContinuePrompt();
+                }
+                else
+                    keepMenu = false;
+            } while (keepMenu == true);
+        }
+
+        static int[] BuildValueThreshold(string valueString)
+        {
+            bool userRes;
+            userRes = AskAboutValue(valueString);
+
+            if (userRes == true)
+            {
+                int minThres;
+                minThres = SetUpValue(valueString, "minimum");
+
+                int maxThres;
+                maxThres = SetUpValue(valueString, "maximum");
+
+                int[] valueArray = new int[] {1, minThres, maxThres};
+                return valueArray;
+            }
+            else
+            {
+                int[] valueArray = new int[] {0};
+                return valueArray;
+            }
+        }
+
+        static bool AskAboutValue(string valueString)
+        {
+            Clear();
+            WriteLine();
+            WriteLine("\t" + valueString.ToUpper());
+            WriteLine();
+            WriteLine("\tFor the alarm, would you like to test the " + valueString + "?");
+
+            bool userConfirmation;
+            userConfirmation = GeneralConfirmation();
+            return userConfirmation;
+        }
+
+        static int SetUpValue(string valueString, string thresType)
+        {
+            DisplayScreenHeader(valueString.ToUpper());
+            WriteLine("\tHere, you will enter in the values for the {0} of the {1} test.", thresType, valueString);
+            WriteLine("\tPlease do so with whole number values, like '0', '32', or '212'.");
+            if (valueString == "temperature")
+            {
+                WriteLine("\tWith " + valueString + ", the values will be in Celcius.");
+            }
+            WriteLine();
+            int newValue;
+            newValue = NumberResponse();
+            DisplayContinuePrompt();
+            return newValue;
+        }
+
+        static int ObtainTime()
+        {
+            DisplayScreenHeader("Alarm System");
+            WriteLine("\tHere, you will be entering in how long the temperature and light will be monitored for.");
+            WriteLine("\tThe units are in seconds, but will be converted to milliseconds for the monitors.");
+            WriteLine();
+
+            bool userConfirmation;
+            userConfirmation = false;
+
+            int timeToMonitor;
+
+            do
+            {
+                timeToMonitor = NumberResponse();
+                WriteLine("\tYou entered " + timeToMonitor + " seconds.");
+                WriteLine();
+                WriteLine("\tAre you fine with this value?");
+                userConfirmation = GeneralConfirmation();
+                if (userConfirmation == false)
+                    WriteLine("\tPlease resubmit your values, then.");
+            } while (userConfirmation == false);
+
+            return timeToMonitor;
+        }
+
+        static int NumberResponse()
+        {
+            int newValue;
+
+            bool userResponse;
+            userResponse = false;
+
+            do
+            {
+                Write("\tEnter your desired value here: ");
+                userResponse = int.TryParse(ReadLine(), out newValue);
+                if (userResponse == false)
+                {
+                    WriteLine("\tPlease only type in whole number values for the range.");
+                    WriteLine();
+                }
+            } while (userResponse == false);
+
+            return newValue;
+        }
+
+        static void StartMonitor(Finch finchRobot, int[] tempRange, int[] lightRange, int monitorTime)
+        {
+            bool startAlarm;
+            startAlarm = false;
+            int cycleTime;
+            cycleTime = 0;
+            string alarmType;
+            alarmType = "";
+
+            WriteLine();
+            Write("\t");
+            do
+            {
+                Write(".");
+                finchRobot.wait(1000);
+                if (tempRange[0] != 0)
+                {
+                    int[] tempMonitor = MonitorSpecific(finchRobot, "temperature", tempRange);
+                    if (tempMonitor[0] <= tempRange[1] || tempMonitor[0] >= tempRange[2])
+                    {
+                        startAlarm = true;
+                        alarmType = "temperature";
+                        WriteLine();
+                        WriteLine();
+                        WriteLine("\tTemperature monitor 1: {0}.", tempMonitor[0]);
+                    }
+                }
+                if (lightRange[0] != 0)
+                {
+                    int[] lightMonitor = MonitorSpecific(finchRobot, "light", lightRange);
+                    if (lightMonitor[0] <= lightRange[1] || lightMonitor[0] >= lightRange[2] || lightMonitor[1] <= lightRange[1] || lightMonitor[1] >= lightRange[2])
+                    {
+                        startAlarm = true;
+                        alarmType = "light";
+                        WriteLine();
+                        WriteLine();
+                        WriteLine("\tLight monitor 1: {0}. Light monitor 2: {1}.", lightMonitor[0], lightMonitor[1]);
+                    }
+                }
+                cycleTime = cycleTime + 1;
+            } while (startAlarm == false && cycleTime <= monitorTime);
+
+            if (startAlarm == true)
+            {
+                WriteLine("\tThe alarm has been activated! One of the values passed the range you set.");
+                MonitorAlarm(finchRobot, alarmType);
+            }
+            else
+            {
+                WriteLine("\tThe threshold was not passed for the duration of time specified.");
+            }
+        }
+
+        static void MonitorAlarm(Finch finchRobot, string alarmType)
+        {
+            if (alarmType == "temperature")
+            {
+                finchRobot.noteOn(1150);
+                finchRobot.setLED(255, 0, 0);
+            }
+            else
+            {
+                finchRobot.noteOn(850);
+                finchRobot.setLED(255, 255, 0);
+            }
+            finchRobot.wait(5000);
+            finchRobot.setLED(0, 0, 0);
+            finchRobot.noteOff();
+        }
+
+        static int[] MonitorSpecific (Finch finchRobot, string valueString, int[] valueRange)
+        {
+            int typeMonitored;
+            int typeMonitoredAlt;
+            if (valueString == "temperature")
+            {
+                typeMonitored = Convert.ToInt32(finchRobot.getTemperature());
+                int[] monitorArray = new int[] {typeMonitored};
+                return monitorArray;
+            }
+            else
+            {
+                typeMonitored = Convert.ToInt32(finchRobot.getLeftLightSensor());
+                typeMonitoredAlt = Convert.ToInt32(finchRobot.getRightLightSensor());
+                int[] monitorArray = new int[] { typeMonitored, typeMonitoredAlt };
+                return monitorArray;
+            }
         }
 
         #endregion
@@ -823,6 +1014,27 @@ namespace Project_FinchControl
 
         /// <summary>
         /// *****************************************************************
+        /// *                    Alarm System Screens                       *
+        /// *****************************************************************
+        /// </summary>
+
+        static void DisplayAlarmMenuPrompt()
+        {
+            DisplayScreenHeader("Alarm System");
+            WriteLine("\tWelcome to the alarm system process.");
+            WriteLine("\tHere, you will be able to monitor light and temperature, and set an alarm if their values are too high or too low.");
+            WriteLine();
+        }
+
+        static void DisplayMonitorPrompt()
+        {
+            DisplayScreenHeader("Alarm System");
+            WriteLine("\tIn a moment, the Finch Robot will begin to monitor its surroundings.");
+            DisplayContinuePrompt();
+        }
+
+        /// <summary>
+        /// *****************************************************************
         /// *                         Prompts                               *
         /// *****************************************************************
         /// </summary>
@@ -854,6 +1066,32 @@ namespace Project_FinchControl
             WriteLine();
             WriteLine("\t" + headerText);
             WriteLine();
+        }
+
+        static bool GeneralConfirmation()
+        {
+            WriteLine("\tPress ENTER if so. Press ESC otherwise.");
+            ConsoleKeyInfo keyCode;
+            do
+            {
+                keyCode = ReadKey(intercept: true);
+                if (keyCode.Key == ConsoleKey.Enter)
+                {
+                    return true;
+                }
+                if (keyCode.Key == ConsoleKey.Escape)
+                {
+                    return false;
+                }
+                else
+                {
+                    WriteLine("\tYou entered " + keyCode.Key + ".");
+                    WriteLine("\tPlease only press ENTER or ESC next time.");
+                    DisplayContinuePrompt();
+                    return false;
+                }
+
+            } while (keyCode.Key != ConsoleKey.Escape && keyCode.Key != ConsoleKey.Enter);
         }
 
         #endregion
