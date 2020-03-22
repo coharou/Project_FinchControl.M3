@@ -9,7 +9,7 @@ namespace Project_FinchControl
 {
 
     //-----------------------------------------------------------------------------------------------------------
-    //      Application:    Finch Control (Mission 3 Sprint 3)
+    //      Application:    Finch Control (Mission 3 Sprint 4)
     //      App. Type:      Console
     //      Author:         Haroutunian, Colin B
     //
@@ -17,9 +17,22 @@ namespace Project_FinchControl
     //                      It is based on the starter solution.
     //                      
     //      Date Created:   February 23rd, 2020
-    //      Date Revised:   March 8th, 2020
+    //      Date Revised:   March 22nd, 2020
     //-----------------------------------------------------------------------------------------------------------
 
+    public enum Command
+    {
+        setLED = 1,
+        noteOn,
+        noteOff,
+        setMotors,
+        getLightSensors,
+        getTemperature,
+        isFinchLevel,
+        getObstacleSensors,
+        wait,
+        exit
+    };
 
     class Program
     {
@@ -114,7 +127,7 @@ namespace Project_FinchControl
                         break;
 
                     case "5":
-
+                        UserProgrammingMenu(finchRobot);
                         break;
 
                     case "6":
@@ -802,6 +815,320 @@ namespace Project_FinchControl
 
         #endregion
 
+        #region USER PROGRAMMING
+        static void UserProgrammingMenu(Finch myFinch)
+        {
+            bool keepMenu;
+            keepMenu = true;
+            do
+            {
+                DisplayProgrammingIntroPrompt();
+                WriteLine("\tAre you sure you want to begin the user programming process?");
+                keepMenu = GeneralConfirmation();
+                if (keepMenu == true)
+                {
+                    (List<int> valLED, List<int> valNote, List<int> valMotors, List<int> valWait) = ConstantsProcess();
+
+                    List<Command> enumCommands = new List<Command>();
+                    (enumCommands, valLED, valNote, valMotors,valWait) = EnterCommandProcess(valLED, valNote, valMotors, valWait);
+
+                    ActivateCommands(myFinch, enumCommands, valLED, valNote, valMotors, valWait);
+
+                    DisplayContinuePrompt();
+                }
+            } while (keepMenu == true);
+        }
+
+        static (List<int>, List<int>, List<int>, List<int>) ConstantsProcess()
+        {
+            List<int> valLED = new List<int>();
+            List<int> valNote = new List<int>();
+            List<int> valMotors = new List<int>();
+            List<int> valWait = new List<int>();
+            valLED.Insert(0,0);
+            valNote.Insert(0, 0);
+            valMotors.Insert(0, 0);
+            valWait.Insert(0, 0);
+
+            DisplayProgrammingConstantPrompt();
+            bool startConstants;
+            startConstants = GeneralConfirmation();
+            if (startConstants == true)
+            {
+                valLED = ConstantsBuilder("LED");
+                valNote = ConstantsBuilder("Note");
+                valMotors = ConstantsBuilder("Motors");
+                valWait = ConstantsBuilder("Wait");
+            }
+            return (valLED, valNote, valMotors, valWait);
+        }
+
+        static List<int> ConstantsBuilder(string valType)
+        {
+            DisplayConstantsQueryPrompt(valType);
+
+            List<int> valList = new List<int>();
+            valList.Insert(0, 1);
+
+            valList.Insert(1, ObtainConstant());
+
+            if (valType == "LED")
+            {
+                for (int x = 1; x < 3; x++)
+                {
+                    valList.Insert(x, ObtainConstant());
+                }
+            }
+            if (valType == "Motors")
+            {
+                for (int x = 1; x < 2; x++)
+                {
+                    valList.Insert(x, ObtainConstant());
+                }
+            }
+
+            return valList;
+        }
+
+        static int ObtainConstant()
+        {
+            bool correctVal;
+            int numVal;
+            string theirRes;
+            correctVal = false;
+
+            do
+            {
+                Write("\tPlease enter the next constant value here: ");
+                correctVal = int.TryParse(theirRes = ReadLine(), out numVal);
+                if (correctVal == false)
+                {
+                    WriteLine("\tYou entered " + theirRes + ".");
+                    WriteLine("\tPlease re-enter your response, this time with only whole number values.");
+                }
+
+            } while (correctVal == false);
+
+            return numVal;
+        }
+
+        static List<int> InProcessConstantBuilder(string valType, List<int> valList, int timesDone)
+        {
+            int altTimesDone;
+            timesDone = timesDone + 1;
+            valList.Insert(timesDone, ObtainConstant());
+            if (valType == "LED")
+            {
+                timesDone = timesDone++;
+                altTimesDone = AddTimesDone(valType, timesDone);
+                for (int x = timesDone; x < altTimesDone; x++)
+                {
+                        valList.Insert(x, ObtainConstant());
+                }
+            }
+            if (valType == "Motors")
+            {
+                timesDone++;
+                altTimesDone = AddTimesDone(valType, timesDone);
+                for (int x = timesDone; x < altTimesDone; x++)
+                {
+                    valList.Insert(x, ObtainConstant());
+                }
+            }
+            return valList;
+        }
+
+        static int AddTimesDone(string valType, int TimesDone)
+        {
+            int altTimesDone;
+            altTimesDone = 0;
+            if (valType == "LED")
+                altTimesDone = TimesDone + 2;
+            if (valType == "Motors")
+                altTimesDone = TimesDone + 1;
+            return altTimesDone;
+        }
+
+        static (List<Command>, List<int>, List<int>, List<int>, List<int>) EnterCommandProcess(List<int> valLED, List<int> valNote, List<int> valMotors, List<int> valWait)
+        {
+            List<Command> enumCommands = new List<Command>();
+            DisplayPossibleEntries();
+            bool endProcess;
+            endProcess = false;
+            int timesLED = 0;
+            int timesNote = 0;
+            int timesMotors = 0;
+            int timesWait = 0;
+            do
+            {
+                ConsoleKeyInfo keyType;
+                keyType = ReadKey(intercept: true);
+                switch (keyType.Key)
+                {
+                    case ConsoleKey.D1:
+                        //LED
+                        enumCommands.Add(EnumMethod(Command.setLED));
+                        if (valLED[0] != 1)
+                        {
+                            valLED = InProcessConstantBuilder("LED", valLED, timesLED);
+                            timesLED++;
+                            timesLED++;
+                            timesLED++;
+                        }
+                        break;
+                    case ConsoleKey.D2:
+                        //note on
+                        enumCommands.Add(EnumMethod(Command.noteOn));
+                        if (valNote[0] != 1)
+                        {
+                            valNote = InProcessConstantBuilder("Note", valNote, timesNote);
+                            timesNote++;
+                        }
+                        break;
+                    case ConsoleKey.D3:
+                        enumCommands.Add(EnumMethod(Command.noteOff));
+                        break;
+                    case ConsoleKey.D4:
+                        //motors
+                        enumCommands.Add(EnumMethod(Command.setMotors));
+                        if (valMotors[0] != 1)
+                        {
+                            valMotors = InProcessConstantBuilder("Motors", valMotors, timesMotors);
+                            timesMotors++;
+                            timesMotors++;
+                        }
+                        break;
+                    case ConsoleKey.D5:
+                        enumCommands.Add(EnumMethod(Command.getLightSensors));
+                        break;
+                    case ConsoleKey.D6:
+                        enumCommands.Add(EnumMethod(Command.getTemperature));
+                        break;
+                    case ConsoleKey.D7:
+                        enumCommands.Add(EnumMethod(Command.isFinchLevel));
+                        break;
+                    case ConsoleKey.D8:
+                        enumCommands.Add(EnumMethod(Command.getObstacleSensors));
+                        break;
+                    case ConsoleKey.D9:
+                        //wait
+                        enumCommands.Add(EnumMethod(Command.wait));
+                        if (valWait[0] != 1)
+                        {
+                            valWait = InProcessConstantBuilder("Wait", valWait, timesWait);
+                            timesWait++;
+                        }
+                        break;
+                    case ConsoleKey.Escape:
+                        //exit
+                        enumCommands.Add(EnumMethod(Command.exit));
+                        endProcess = true;
+                        break;
+                    default:
+                        WriteLine("\tYou pressed key " + keyType.Key + ".");
+                        WriteLine("\tPlease only press keys 0-9 to enter commands.");
+                        break;
+                }
+            } while (endProcess == false);
+
+            return (enumCommands, valLED, valNote, valMotors, valWait);
+        }
+
+        static Command EnumMethod(Command theirValue)
+        {
+            WriteLine(Convert.ToString(theirValue));
+            return theirValue;
+        }
+
+        static void ActivateCommands(Finch finchRobot, List<Command> theirCommands, List<int> valLED, List<int> valNote, List<int> valMotors, List<int> valWait)
+        {
+            DisplayActivation();
+            int cycleLED = 1;
+            int cycleMotor = 1;
+            int cycleNote = 1;
+            int cycleWait = 1;
+
+            foreach (Command item in theirCommands)
+            {
+                switch (item)
+                {
+                    case Command.setLED:
+                        WriteLine(Command.setLED);
+                        if (valLED[0] == 1)
+                            finchRobot.setLED(valLED[1], valLED[2], valLED[3]);
+                        else
+                        {
+                            finchRobot.setLED(valLED[cycleLED], valLED[cycleLED++], valLED[cycleLED++]);
+                            cycleLED++;
+                        }
+                        break;
+                    case Command.noteOn:
+                        WriteLine(Command.noteOn);
+                        if (valNote[0] == 1)
+                        {
+                            finchRobot.noteOn(valNote[1]);
+                            break;
+                        }
+                        else
+                        {
+                            finchRobot.noteOn(valNote[cycleNote]);
+                            cycleNote++;
+                            break;
+                        }
+                    case Command.noteOff:
+                        WriteLine(Command.noteOff);
+                        finchRobot.noteOff();
+                        break;
+                    case Command.setMotors:
+                        WriteLine(Command.setMotors);
+                        if (valMotors[0] == 1)
+                            finchRobot.setMotors(valMotors[1], valMotors[2]);
+                        else
+                        {
+                            finchRobot.setMotors(valMotors[cycleMotor], valMotors[cycleMotor++]);
+                            cycleMotor++;
+                        }
+                        break;
+                    case Command.getLightSensors:
+                        WriteLine(Command.getLightSensors);
+                        Write(finchRobot.getLeftLightSensor() + "\t" + finchRobot.getRightLightSensor());
+                        break;
+                    case Command.getTemperature:
+                        WriteLine(Command.getTemperature);
+                        Write("\t" + finchRobot.getTemperature() + " degrees");
+                        break;
+                    case Command.isFinchLevel:
+                        WriteLine(Command.isFinchLevel);
+                        Write("\t" + finchRobot.isFinchLevel());
+                        break;
+                    case Command.getObstacleSensors:
+                        WriteLine(Command.getObstacleSensors);
+                        Write("\tLeft:" + finchRobot.isObstacleLeftSide() + "\tRight:" + finchRobot.isObstacleRightSide());
+                        finchRobot.getObstacleSensors();
+                        break;
+                    case Command.wait:
+                        WriteLine(Command.wait);
+                        if (valWait[0] == 1)
+                            finchRobot.wait(valWait[1]);
+                        else
+                        {
+                            finchRobot.wait(valWait[cycleWait]);
+                            cycleWait++;
+                        }
+                        break;
+                    case Command.exit:
+                        WriteLine(Command.exit);
+                        finchRobot.setMotors(0, 0);
+                        finchRobot.setLED(0, 0, 0);
+                        finchRobot.noteOff();
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        #endregion
+
         #region FINCH ROBOT MANAGEMENT
         /// <summary>
         /// *****************************************************************
@@ -1031,6 +1358,66 @@ namespace Project_FinchControl
             DisplayScreenHeader("Alarm System");
             WriteLine("\tIn a moment, the Finch Robot will begin to monitor its surroundings.");
             DisplayContinuePrompt();
+        }
+
+        /// <summary>
+        /// *****************************************************************
+        /// *                    User Programming Screens                   *
+        /// *****************************************************************
+        /// </summary>
+        /// 
+        static void DisplayProgrammingIntroPrompt()
+        {
+            DisplayScreenHeader("User Programming");
+            WriteLine("\tWelcome to the User Programming menu screen.");
+            WriteLine("\tHere, you can set up a list of commands to play based on the criteria you enter.");
+            WriteLine();
+        }
+
+        static void DisplayProgrammingConstantPrompt()
+        {
+            DisplayScreenHeader("User Programming");
+            WriteLine("\tIf you would like, you can set up constant times for the commands.");
+            WriteLine("\tThis means that the value you enter there will be used every time you enter that command.");
+            WriteLine("\tIf you do not add a constant for an option, you will be prompted to use one each time you enter the command in.");
+            WriteLine();
+            WriteLine("\tNOTE: this only affects LED, sound, motor, and wait times.");
+            WriteLine();
+        }
+
+        static void DisplayConstantsQueryPrompt(string valType)
+        {
+            DisplayScreenHeader("User Programming: " + valType);
+            WriteLine("\tYou will be entering in values for the " + valType + " here.");
+            WriteLine();
+            WriteLine("\tType your first desired value, as an integer, below.");
+        }
+
+        static void DisplayPossibleEntries()
+        {
+            DisplayScreenHeader("User Programming");
+            WriteLine("\tYou will be able to enter in the commands here.");
+            WriteLine("\tYou will do this by pressing the number keys, 1-9. You can exit with ESC.");
+            WriteLine();
+            WriteLine("\t1) setLED");
+            WriteLine("\t2) noteOn");
+            WriteLine("\t3) noteOff");
+            WriteLine("\t4) setMotors");
+            WriteLine("\t5) getLightSensors");
+            WriteLine("\t6) getTemperature");
+            WriteLine("\t7) isFinchLevel");
+            WriteLine("\t8) getObstacleSensors");
+            WriteLine("\t9) wait");
+            WriteLine("\tESC) exit");
+            WriteLine();
+        }
+
+        static void DisplayActivation()
+        {
+            DisplayScreenHeader("User Programming");
+            WriteLine("You will now be able to see your entered commands performed by the Finch Robot.");
+            WriteLine("They will also be shown in the console.");
+            WriteLine();
         }
 
         /// <summary>
