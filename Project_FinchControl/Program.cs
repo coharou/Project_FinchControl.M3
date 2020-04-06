@@ -9,7 +9,7 @@ namespace Project_FinchControl
 {
 
     //-----------------------------------------------------------------------------------------------------------
-    //      Application:    Finch Control (Mission 3 Sprint 4)
+    //      Application:    Finch Control (Mission 3 Sprint 5)
     //      App. Type:      Console
     //      Author:         Haroutunian, Colin B
     //
@@ -17,7 +17,7 @@ namespace Project_FinchControl
     //                      It is based on the starter solution.
     //                      
     //      Date Created:   February 23rd, 2020
-    //      Date Revised:   March 22nd, 2020
+    //      Date Revised:   April 5th, 2020
     //-----------------------------------------------------------------------------------------------------------
 
     public enum Command
@@ -382,6 +382,11 @@ namespace Project_FinchControl
         #endregion
 
         #region DATA RECORDER
+        /// <summary>
+        /// -----------------------------------------------------------------
+        /// -                       MENU OPTIONS                            -
+        /// -----------------------------------------------------------------
+        /// </summary>
         static void DisplayDataRecorderMenuScreen(Finch myFinch)
         {
             CursorVisible = true;
@@ -393,7 +398,8 @@ namespace Project_FinchControl
                 DisplayDataRecorderMenuPrompt();
                 WriteLine("\t1) Temperature recording");
                 WriteLine("\t2) Light value recording");
-                WriteLine("\t3) Return to Main Menu");
+                WriteLine("\t3) Load a previous recording save");
+                WriteLine("\t4) Return to Main Menu");
                 WriteLine();
                 Write("\tEnter your choice here: ");
                 CursorVisible = true;
@@ -407,13 +413,18 @@ namespace Project_FinchControl
                         EnterRecording(myFinch, "Light");
                         break;
                     case "3":
+                        EnterSaveLoadingMenu();
+                        break;
+                    case "4":
                         backToMain = true;
                         break;
                     default:
+                        WriteLine();
                         WriteLine("\tPlease only enter:");
                         WriteLine("\t1 for temperature recording,");
                         WriteLine("\t2 for light value recording,");
-                        WriteLine("\t3 to return to the main menu.");
+                        WriteLine("\t3 for the save menu,");
+                        WriteLine("\t4 to return to the main menu.");
                         DisplayContinuePrompt();
                         break;
                 }
@@ -429,17 +440,61 @@ namespace Project_FinchControl
             bool confirmationResponse = GeneralConfirmation();
             if (confirmationResponse == true)
             {
+                //Retrieves the sample size from the user, based on the specified data type.
                 Clear();
                 int theirSampleSize;
                 theirSampleSize = DataTypeSampleSize(typeRecorded);
-                BuildTheArrays(finchRobot, theirSampleSize, typeRecorded);
+
+                //Asks if the user wants the recording saved. If yes, it will obtain a save name from the user.
+                bool makeSave;
+                makeSave = false;
+                makeSave = SaveQuestion(typeRecorded);
+                string saveName;
+                saveName = "";
+                if (makeSave == true)
+                {
+                    saveName = AskForSaveName(typeRecorded);
+                }
+
+                //Based on the previous file criteria, a record may be made for the user.
+                //The name of their file will also be added to Names.txt.
+                CreateSaveFile(makeSave, saveName, typeRecorded);
+
+                //Creates the arrays for the user's chosen data type.
+                BuildTheArrays(finchRobot, theirSampleSize, typeRecorded, makeSave, saveName);
                 DisplayContinuePrompt();
-            }
-            else
-            {
             }
         }
 
+        static void EnterSaveLoadingMenu()
+        {
+            bool continueApp;
+            continueApp = true;
+            int menuChoice;
+
+            do
+            {
+                DisplayDataRecordsMenuPrompt();
+                RecordMenuOptions();
+                menuChoice = RecordMenuChoice();
+                if (menuChoice == -1)
+                {
+                    continueApp = false;
+                }
+                else
+                {
+                    RecordingRecordReview(menuChoice);
+                    continueApp = UserExitQuestion();
+                }
+            } while (continueApp == true);
+        }
+
+        /// <summary>
+        /// -----------------------------------------------------------------
+        /// -               DATA TYPE SAMPLE SIZE OPTIONS                   -
+        /// -           This section was unchanged for Sprint 5             -
+        /// -----------------------------------------------------------------
+        /// </summary>
         static int DataTypeSampleSize(string dataDecision)
         {
             bool newConfirmation;
@@ -470,10 +525,6 @@ namespace Project_FinchControl
                     DisplayContinuePrompt();
                     Clear();
                 }
-                else
-                {
-
-                }
             } while (newConfirmation == false);
 
             return desiredSample;
@@ -494,14 +545,61 @@ namespace Project_FinchControl
                     Write("\tEnter the desired sample size: ");
                     sampleQuality = int.TryParse(ReadLine(), out desiredSample);
                 }
-                else
-                {
-                }
             } while (sampleQuality == false);
             return desiredSample;
         }
 
-        static void BuildTheArrays(Finch finchRobot, int theirSampleSize, string typeRecorded)
+        /// <summary>
+        /// -----------------------------------------------------------------
+        /// -                FILE CREATION PROCEDURES                       -
+        /// -----------------------------------------------------------------
+        /// </summary>
+        static bool SaveQuestion(string typeRecorded)
+        {
+            DisplayScreenHeader("Data Recorder");
+            WriteLine("\tFor the upcoming data recording for {0}, would you like to save the results in a record file?", typeRecorded);
+            bool createSave;
+            createSave = GeneralConfirmation();
+            return createSave;
+        }
+
+        static string AskForSaveName(string typeRecorded)
+        {
+            DisplayScreenHeader("Data Recorder");
+            string saveName;
+            WriteLine("\tWhen entering in a file name, you do not need to include the type recorded.");
+            WriteLine("\tThe type '{0}' will already be entered at the start of your file.", typeRecorded);
+            WriteLine("\tIt is suggested you enter a date, time, or something easy to remember for future reference.");
+            WriteLine();
+            Write("\tPlease enter in a name for your save file here: ");
+            saveName = ReadLine();
+            return saveName;
+        }
+
+        static void CreateSaveFile(bool makeSave, string saveName, string typeRecorded)
+        {
+            if (makeSave == true)
+            {
+                //Makes the file name.
+                string newFileName;
+                newFileName = typeRecorded + "-" + saveName;
+
+                //Makes the file name array, so it can be inserted into AppendAllLines.
+                string[] newNameArray = new string[1];
+                newNameArray[0] = newFileName;
+
+                //Adds the file name to the Names.txt file. 
+                //This file is later referenced when saving, so that the user will be able to see a list of file names to choose from.
+                File.AppendAllLines(@"Records\Names.txt", newNameArray);
+            }
+        }
+
+        /// <summary>
+        /// -----------------------------------------------------------------
+        /// -                DATA TYPE RECORDING PROCESS                    -
+        /// -----------------------------------------------------------------
+        /// </summary>
+        static void BuildTheArrays(Finch finchRobot, int theirSampleSize, string typeRecorded, bool makeSave, string saveName)
         {
             int[] firstArray;
             firstArray = new int[theirSampleSize];
@@ -511,82 +609,72 @@ namespace Project_FinchControl
             numberingArray = new int[theirSampleSize];
 
             string typeOne;
-            typeOne = "";
             string typeTwo;
-            typeTwo = "";
+            string writtenRecordings;
 
-            int firstTotal;
-            firstTotal = 0;
-            int secondTotal;
-            secondTotal = 0;
+            int firstTotal = 0;
+            int secondTotal = 0;
+            int firstAverage;
+            int secondAverage;
+
+            finchRobot.noteOn(500);
 
             if (typeRecorded == "Temperature")
             {
-                finchRobot.setLED(255, 0, 0);
-                finchRobot.noteOn(500);
                 typeOne = "CELCIUS";
                 typeTwo = "FAHRENHEIT";
 
-                WriteLine("\tHere are your values for the " + typeRecorded + ".");
-                WriteLine();
-                WriteLine("\t" + "ORDER" + "          " + typeOne + "            " + typeTwo);
+                DataTypeHeadingPrompt(typeRecorded, typeOne, typeTwo);
 
                 //INDIVIDUAL DATA
+                //This data is the individual recordings per each sample time.
                 for (int sample = 0; sample < theirSampleSize; sample++)
                 {
+                    finchRobot.wait(2000);
+
                     firstArray[sample] += Convert.ToInt32(finchRobot.getTemperature());
                     secondArray[sample] += CelciusToFahrenheit(finchRobot);
                     numberingArray[sample] += sample;
-                    WriteLine("\t" + numberingArray[sample] + "               " + firstArray[sample] + "               " + secondArray[sample]);
-                    finchRobot.wait(2000);
-                }
-                
-                //AVERAGED DATA
-                for (int sample = 0; sample < theirSampleSize; sample ++)
-                {
-                    firstTotal = firstTotal + firstArray[sample];
-                    secondTotal = secondTotal + secondArray[sample];
-                }
+                    
+                    writtenRecordings = WriteDataLine(numberingArray, firstArray, secondArray, sample);
 
-                int firstAverage = firstTotal / theirSampleSize;
-                int secondAverage = secondTotal / theirSampleSize;
-                WriteLine("\t" + " " + "               " + firstAverage + "               " + secondAverage);
+                    RecordDataLine(writtenRecordings, typeRecorded, saveName, makeSave);
+                }
             }
 
             if (typeRecorded == "Light")
             {
-                finchRobot.setLED(0, 125, 125);
-                finchRobot.noteOn(500);
-                typeOne = "LEFT";
+                typeOne = "LEFT"; 
                 typeTwo = "RIGHT";
 
-                WriteLine("\tHere are your values for the " + typeRecorded + ".");
-                WriteLine();
-                WriteLine("\t" + "ORDER" + "          " + typeOne + "            " + typeTwo);
+                DataTypeHeadingPrompt(typeRecorded, typeOne, typeTwo);
 
                 //INDIVIDUAL DATA
+                //This data is the individual recordings per each sample time.
                 for (int sample = 0; sample < theirSampleSize; sample++)
                 {
+                    finchRobot.wait(2000);
+
                     firstArray[sample] += finchRobot.getLeftLightSensor();
                     secondArray[sample] += finchRobot.getRightLightSensor();
                     numberingArray[sample] += sample;
-                    WriteLine("\t"+ numberingArray[sample] + "               " + firstArray[sample] + "               " + secondArray[sample]);
-                    finchRobot.wait(2000);
-                }
+                    
+                    writtenRecordings = WriteDataLine(numberingArray, firstArray, secondArray, sample);
 
-                //AVERAGED DATA
-                for (int sample = 0; sample < theirSampleSize; sample++)
-                {
-                    firstTotal = firstTotal + firstArray[sample];
-                    secondTotal = secondTotal + secondArray[sample];
+                    RecordDataLine(writtenRecordings, typeRecorded, saveName, makeSave);
                 }
-
-                int firstAverage = firstTotal / theirSampleSize;
-                int secondAverage = secondTotal / theirSampleSize;
-                WriteLine("\t" + " " + "               " + firstAverage + "               " + secondAverage);
             }
 
-            finchRobot.setLED(0, 0, 0);
+            //TOTALED DATA
+            //These totals will be used to create the averages below this for loop.
+            (firstTotal, secondTotal) = CalculateTotals(theirSampleSize, firstTotal, firstArray, secondTotal, secondArray);
+
+            //AVERAGED DATA
+            //The numbers from this method will be displayed below the table and totals.
+            //The averages here will also be added to the record file.
+            (firstAverage, secondAverage) = WriteAverages(firstTotal, secondTotal, theirSampleSize);
+            RecordAverages(firstAverage, secondAverage, typeRecorded, saveName, makeSave);
+
             finchRobot.noteOff();
         }
 
@@ -597,6 +685,139 @@ namespace Project_FinchControl
             return fahrenheitVal;
         }
 
+        static (int, int) CalculateTotals(int theirSampleSize, int firstTotal, int[] firstArray, int secondTotal, int[] secondArray)
+        {
+            for (int sample = 0; sample < theirSampleSize; sample++)
+            {
+                firstTotal = firstTotal + firstArray[sample];
+                secondTotal = secondTotal + secondArray[sample];
+            }
+
+            return (firstTotal, secondTotal);
+        }
+
+        static (int, int) WriteAverages(int firstTotal, int secondTotal, int theirSampleSize)
+        {
+            int firstAverage = firstTotal / theirSampleSize;
+            int secondAverage = secondTotal / theirSampleSize;
+            WriteLine("\t" + " " + "               " + firstAverage + "               " + secondAverage);
+            return (firstAverage, secondAverage);
+        }
+
+        static string WriteDataLine(int[] numberingArray, int[] firstArray, int[] secondArray, int sample)
+        {
+            string writtenRecordings;
+            writtenRecordings = "\t" + numberingArray[sample] + "               " + firstArray[sample] + "               " + secondArray[sample];
+            WriteLine(writtenRecordings);
+            return writtenRecordings;
+        }
+
+        /// <summary>
+        /// -----------------------------------------------------------------
+        /// -                   DATA LOGGING PROCESS                        -
+        /// -----------------------------------------------------------------
+        /// </summary>
+        static void RecordDataLine(string writtenRecordings, string typeRecorded, string saveName, bool makeSave)
+        {
+            if (makeSave == true)
+            {
+                string[] writeRecordsArray;
+                writeRecordsArray = new string[1];
+                writeRecordsArray[0] = writtenRecordings;
+                string newFileName;
+                newFileName = "" + typeRecorded + "-" + saveName + "";
+                File.AppendAllLines(@"Records\" + newFileName + ".txt", writeRecordsArray);
+            }
+        }
+
+        static void RecordAverages(int firstAverage, int secondAverage, string typeRecorded, string saveName, bool makeSave)
+        {
+            if (makeSave == true)
+            {
+                string newFileName;
+                newFileName = typeRecorded + "-" + saveName;
+                string[] averagesArray;
+                averagesArray = new string[1];
+                averagesArray[0] = "\t" + " " + "               " + firstAverage + "               " + secondAverage;
+                File.AppendAllLines(@"Records\" + newFileName + ".txt", averagesArray);
+            }
+        }
+
+        /// <summary>
+        /// -----------------------------------------------------------------
+        /// -                 METHODS FOR SAVED RECORDINGS                  -
+        /// -----------------------------------------------------------------
+        /// </summary>
+        static void RecordMenuOptions()
+        {
+            //Retrieves and writes out all of the options for the user to choose from.
+
+            string[] possibleEntries;
+            possibleEntries = File.ReadAllLines(@"Records\Names.txt");
+            int position;
+            position = 0;
+            foreach (string recordingName in possibleEntries)
+            {
+                WriteLine("\t" + position + ") " + recordingName);
+                position++;
+            }
+        }
+
+        static int RecordMenuChoice()
+        {
+            //Based on the numbers given by RecordMenuOptions, this will obtain what record the user desires.
+
+            bool entryQuality = false;
+            int userSelection;
+            string userInput;
+
+            do
+            {
+                Write("\tEnter your decision here: ");
+                entryQuality = int.TryParse(userInput = ReadLine(), out userSelection);
+                if (entryQuality == false)
+                {
+                    WriteLine();
+                    WriteLine("\tPlease only enter values given by the menu.");
+                    WriteLine("\tTo re-iterate, only use non-negative, whole number values, EXCEPT to exit. To exit, type '-1'.");
+                }
+            } while (entryQuality == false);
+            
+            return userSelection;
+        }
+
+        static void RecordingRecordReview(int menuChoice)
+        {
+            //Obtains the list of names.
+            string[] namesArray;
+            namesArray = File.ReadAllLines(@"Records\Names.txt");
+
+            //Obtains the name specified by the user.
+            string recordName;
+            recordName = namesArray[menuChoice];
+
+            //Finds the record chosen by the user.
+            string[] reviewRecord;
+            reviewRecord = File.ReadAllLines(@"Records\" + recordName + ".txt");
+
+            //Prompts the user about the upcoming information.
+            DisplaySaveRecordPrompt(recordName);
+
+            //Writes out the information from the record.
+            foreach (string recordedInfo in reviewRecord)
+            {
+                WriteLine(recordedInfo);
+            }
+        }
+
+        static bool UserExitQuestion()
+        {
+            WriteLine();
+            WriteLine("\tWould you like to review other records?");
+            bool userRes;
+            userRes = GeneralConfirmation();
+            return userRes;
+        }
         #endregion
 
         #region ALARM SYSTEM
@@ -1327,7 +1548,6 @@ namespace Project_FinchControl
         /// </summary>
         static void DisplayDataRecorderMenuPrompt()
         {
-            WriteLine();
             DisplayScreenHeader("Data Recorder");
             WriteLine("\tAt this screen, you can access ways to obtain temperature and light values from around the Finch Robot.");
         }
@@ -1337,6 +1557,28 @@ namespace Project_FinchControl
             DisplayScreenHeader(dataType);
             WriteLine("\tWelcome to the " + dataType + " screen.");
             WriteLine("\tHere, you will be able to access data for the " + dataType + " around your Finch Robot.");
+        }
+
+        static void DataTypeHeadingPrompt(string typeRecorded, string typeOne, string typeTwo)
+        {
+            WriteLine("\tHere are your values for the " + typeRecorded + ".");
+            WriteLine();
+            WriteLine("\t" + "ORDER" + "          " + typeOne + "            " + typeTwo);
+        }
+
+        static void DisplayDataRecordsMenuPrompt()
+        {
+            DisplayScreenHeader("Data Recorder");
+            WriteLine("\tHere, you will be able to retrieve old recording records for review.");
+            WriteLine("\tPlease only enter non-negative, whole number values, EXCEPT to exit. To exit, type '-1'.");
+            WriteLine();
+        }
+
+        static void DisplaySaveRecordPrompt(string recordName)
+        {
+            DisplayScreenHeader("Data Recorder: " + recordName);
+            WriteLine("\tIn a moment, you will be able to see the recorded information from the requested record.");
+            WriteLine();
         }
 
         /// <summary>
